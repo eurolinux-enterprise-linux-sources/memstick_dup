@@ -1,0 +1,371 @@
+diff --git a/drivers/memstick/core/memstick.c b/drivers/memstick/core/memstick.c
+index b3bf1c4..1eca3d9 100644
+--- a/drivers/memstick/core/memstick.c
++++ b/drivers/memstick/core/memstick.c
+@@ -18,6 +18,8 @@
+ #include <linux/delay.h>
+ 
+ #define DRIVER_NAME "memstick"
++#define DRIVER_VERSION "0.1-rh1"
++MODULE_VERSION(DRIVER_VERSION);
+ 
+ static unsigned int cmd_retries = 3;
+ module_param(cmd_retries, uint, 0644);
+@@ -202,17 +204,17 @@ static int memstick_dummy_check(struct memstick_dev *card)
+ }
+ 
+ /**
+- * memstick_detect_change - schedule media detection on memstick host
++ * memstick_detect_change_dup - schedule media detection on memstick host
+  * @host - host to use
+  */
+-void memstick_detect_change(struct memstick_host *host)
++void memstick_detect_change_dup(struct memstick_host *host)
+ {
+ 	queue_work(workqueue, &host->media_checker);
+ }
+-EXPORT_SYMBOL(memstick_detect_change);
++EXPORT_SYMBOL(memstick_detect_change_dup);
+ 
+ /**
+- * memstick_next_req - called by host driver to obtain next request to process
++ * memstick_next_req_dup - called by host driver to obtain next request to process
+  * @host - host to use
+  * @mrq - pointer to stick the request to
+  *
+@@ -221,7 +223,7 @@ EXPORT_SYMBOL(memstick_detect_change);
+  * unsuccessful, it is retried for predetermined number of times. Return value
+  * of 0 means that new request was assigned to the host.
+  */
+-int memstick_next_req(struct memstick_host *host, struct memstick_request **mrq)
++int memstick_next_req_dup(struct memstick_host *host, struct memstick_request **mrq)
+ {
+ 	int rc = -ENXIO;
+ 
+@@ -241,13 +243,13 @@ int memstick_next_req(struct memstick_host *host, struct memstick_request **mrq)
+ 
+ 	return rc;
+ }
+-EXPORT_SYMBOL(memstick_next_req);
++EXPORT_SYMBOL(memstick_next_req_dup);
+ 
+ /**
+- * memstick_new_req - notify the host that some requests are pending
++ * memstick_new_req_dup - notify the host that some requests are pending
+  * @host - host to use
+  */
+-void memstick_new_req(struct memstick_host *host)
++void memstick_new_req_dup(struct memstick_host *host)
+ {
+ 	if (host->card) {
+ 		host->retries = cmd_retries;
+@@ -255,15 +257,15 @@ void memstick_new_req(struct memstick_host *host)
+ 		host->request(host);
+ 	}
+ }
+-EXPORT_SYMBOL(memstick_new_req);
++EXPORT_SYMBOL(memstick_new_req_dup);
+ 
+ /**
+- * memstick_init_req_sg - set request fields needed for bulk data transfer
++ * memstick_init_req_dup_sg - set request fields needed for bulk data transfer
+  * @mrq - request to use
+  * @tpc - memstick Transport Protocol Command
+  * @sg - TPC argument
+  */
+-void memstick_init_req_sg(struct memstick_request *mrq, unsigned char tpc,
++void memstick_init_req_dup_sg(struct memstick_request *mrq, unsigned char tpc,
+ 			  const struct scatterlist *sg)
+ {
+ 	mrq->tpc = tpc;
+@@ -280,10 +282,10 @@ void memstick_init_req_sg(struct memstick_request *mrq, unsigned char tpc,
+ 	else
+ 		mrq->need_card_int = 0;
+ }
+-EXPORT_SYMBOL(memstick_init_req_sg);
++EXPORT_SYMBOL(memstick_init_req_dup_sg);
+ 
+ /**
+- * memstick_init_req - set request fields needed for short data transfer
++ * memstick_init_req_dup - set request fields needed for short data transfer
+  * @mrq - request to use
+  * @tpc - memstick Transport Protocol Command
+  * @buf - TPC argument buffer
+@@ -293,7 +295,7 @@ EXPORT_SYMBOL(memstick_init_req_sg);
+  * in size) allows us to just copy the value between request structure and
+  * user supplied buffer.
+  */
+-void memstick_init_req(struct memstick_request *mrq, unsigned char tpc,
++void memstick_init_req_dup(struct memstick_request *mrq, unsigned char tpc,
+ 		       const void *buf, size_t length)
+ {
+ 	mrq->tpc = tpc;
+@@ -313,7 +315,7 @@ void memstick_init_req(struct memstick_request *mrq, unsigned char tpc,
+ 	else
+ 		mrq->need_card_int = 0;
+ }
+-EXPORT_SYMBOL(memstick_init_req);
++EXPORT_SYMBOL(memstick_init_req_dup);
+ 
+ /*
+  * Functions prefixed with "h_" are protocol callbacks. They can be called from
+@@ -328,7 +330,7 @@ static int h_memstick_read_dev_id(struct memstick_dev *card,
+ 	struct ms_id_register id_reg;
+ 
+ 	if (!(*mrq)) {
+-		memstick_init_req(&card->current_mrq, MS_TPC_READ_REG, NULL,
++		memstick_init_req_dup(&card->current_mrq, MS_TPC_READ_REG, NULL,
+ 				  sizeof(struct ms_id_register));
+ 		*mrq = &card->current_mrq;
+ 		return 0;
+@@ -346,11 +348,11 @@ static int h_memstick_read_dev_id(struct memstick_dev *card,
+ 	}
+ }
+ 
+-static int h_memstick_set_rw_addr(struct memstick_dev *card,
++static int h_memstick_set_rw_addr_dup(struct memstick_dev *card,
+ 				  struct memstick_request **mrq)
+ {
+ 	if (!(*mrq)) {
+-		memstick_init_req(&card->current_mrq, MS_TPC_SET_RW_REG_ADRS,
++		memstick_init_req_dup(&card->current_mrq, MS_TPC_SET_RW_REG_ADRS,
+ 				  (char *)&card->reg_addr,
+ 				  sizeof(card->reg_addr));
+ 		*mrq = &card->current_mrq;
+@@ -362,19 +364,19 @@ static int h_memstick_set_rw_addr(struct memstick_dev *card,
+ }
+ 
+ /**
+- * memstick_set_rw_addr - issue SET_RW_REG_ADDR request and wait for it to
++ * memstick_set_rw_addr_dup - issue SET_RW_REG_ADDR request and wait for it to
+  *                        complete
+  * @card - media device to use
+  */
+-int memstick_set_rw_addr(struct memstick_dev *card)
++int memstick_set_rw_addr_dup(struct memstick_dev *card)
+ {
+-	card->next_request = h_memstick_set_rw_addr;
+-	memstick_new_req(card->host);
++	card->next_request = h_memstick_set_rw_addr_dup;
++	memstick_new_req_dup(card->host);
+ 	wait_for_completion(&card->mrq_complete);
+ 
+ 	return card->current_mrq.error;
+ }
+-EXPORT_SYMBOL(memstick_set_rw_addr);
++EXPORT_SYMBOL(memstick_set_rw_addr_dup);
+ 
+ static struct memstick_dev *memstick_alloc_card(struct memstick_host *host)
+ {
+@@ -399,11 +401,11 @@ static struct memstick_dev *memstick_alloc_card(struct memstick_host *host)
+ 		init_completion(&card->mrq_complete);
+ 
+ 		host->card = card;
+-		if (memstick_set_rw_addr(card))
++		if (memstick_set_rw_addr_dup(card))
+ 			goto err_out;
+ 
+ 		card->next_request = h_memstick_read_dev_id;
+-		memstick_new_req(host);
++		memstick_new_req_dup(host);
+ 		wait_for_completion(&card->mrq_complete);
+ 
+ 		if (card->current_mrq.error)
+@@ -452,7 +454,7 @@ static void memstick_check(struct work_struct *work)
+ 		dev_dbg(&host->dev, "new card %02x, %02x, %02x\n",
+ 			card->id.type, card->id.category, card->id.class);
+ 		if (host->card) {
+-			if (memstick_set_rw_addr(host->card)
++			if (memstick_set_rw_addr_dup(host->card)
+ 			    || !memstick_dev_match(host->card, &card->id)
+ 			    || !(host->card->check(host->card))) {
+ 				device_unregister(&host->card->dev);
+@@ -480,11 +482,11 @@ out_power_off:
+ }
+ 
+ /**
+- * memstick_alloc_host - allocate a memstick_host structure
++ * memstick_alloc_host_dup - allocate a memstick_host structure
+  * @extra: size of the user private data to allocate
+  * @dev: parent device of the host
+  */
+-struct memstick_host *memstick_alloc_host(unsigned int extra,
++struct memstick_host *memstick_alloc_host_dup(unsigned int extra,
+ 					  struct device *dev)
+ {
+ 	struct memstick_host *host;
+@@ -499,13 +501,13 @@ struct memstick_host *memstick_alloc_host(unsigned int extra,
+ 	}
+ 	return host;
+ }
+-EXPORT_SYMBOL(memstick_alloc_host);
++EXPORT_SYMBOL(memstick_alloc_host_dup);
+ 
+ /**
+- * memstick_add_host - start request processing on memstick host
++ * memstick_add_host_dup - start request processing on memstick host
+  * @host - host to use
+  */
+-int memstick_add_host(struct memstick_host *host)
++int memstick_add_host_dup(struct memstick_host *host)
+ {
+ 	int rc;
+ 
+@@ -529,16 +531,16 @@ int memstick_add_host(struct memstick_host *host)
+ 	}
+ 
+ 	host->set_param(host, MEMSTICK_POWER, MEMSTICK_POWER_OFF);
+-	memstick_detect_change(host);
++	memstick_detect_change_dup(host);
+ 	return 0;
+ }
+-EXPORT_SYMBOL(memstick_add_host);
++EXPORT_SYMBOL(memstick_add_host_dup);
+ 
+ /**
+- * memstick_remove_host - stop request processing on memstick host
++ * memstick_remove_host_dup - stop request processing on memstick host
+  * @host - host to use
+  */
+-void memstick_remove_host(struct memstick_host *host)
++void memstick_remove_host_dup(struct memstick_host *host)
+ {
+ 	flush_workqueue(workqueue);
+ 	mutex_lock(&host->lock);
+@@ -553,36 +555,36 @@ void memstick_remove_host(struct memstick_host *host)
+ 	spin_unlock(&memstick_host_lock);
+ 	device_del(&host->dev);
+ }
+-EXPORT_SYMBOL(memstick_remove_host);
++EXPORT_SYMBOL(memstick_remove_host_dup);
+ 
+ /**
+- * memstick_free_host - free memstick host
++ * memstick_free_host_dup - free memstick host
+  * @host - host to use
+  */
+-void memstick_free_host(struct memstick_host *host)
++void memstick_free_host_dup(struct memstick_host *host)
+ {
+ 	mutex_destroy(&host->lock);
+ 	put_device(&host->dev);
+ }
+-EXPORT_SYMBOL(memstick_free_host);
++EXPORT_SYMBOL(memstick_free_host_dup);
+ 
+ /**
+- * memstick_suspend_host - notify bus driver of host suspension
++ * memstick_suspend_host_dup - notify bus driver of host suspension
+  * @host - host to use
+  */
+-void memstick_suspend_host(struct memstick_host *host)
++void memstick_suspend_host_dup(struct memstick_host *host)
+ {
+ 	mutex_lock(&host->lock);
+ 	host->set_param(host, MEMSTICK_POWER, MEMSTICK_POWER_OFF);
+ 	mutex_unlock(&host->lock);
+ }
+-EXPORT_SYMBOL(memstick_suspend_host);
++EXPORT_SYMBOL(memstick_suspend_host_dup);
+ 
+ /**
+- * memstick_resume_host - notify bus driver of host resumption
++ * memstick_resume_host_dup - notify bus driver of host resumption
+  * @host - host to use
+  */
+-void memstick_resume_host(struct memstick_host *host)
++void memstick_resume_host_dup(struct memstick_host *host)
+ {
+ 	int rc = 0;
+ 
+@@ -592,29 +594,37 @@ void memstick_resume_host(struct memstick_host *host)
+ 	mutex_unlock(&host->lock);
+ 
+ 	if (!rc)
+-		memstick_detect_change(host);
++		memstick_detect_change_dup(host);
+ }
+-EXPORT_SYMBOL(memstick_resume_host);
++EXPORT_SYMBOL(memstick_resume_host_dup);
+ 
+-int memstick_register_driver(struct memstick_driver *drv)
++int memstick_register_driver_dup(struct memstick_driver *drv)
+ {
+ 	drv->driver.bus = &memstick_bus_type;
+ 
+ 	return driver_register(&drv->driver);
+ }
+-EXPORT_SYMBOL(memstick_register_driver);
++EXPORT_SYMBOL(memstick_register_driver_dup);
+ 
+-void memstick_unregister_driver(struct memstick_driver *drv)
++void memstick_unregister_driver_dup(struct memstick_driver *drv)
+ {
+ 	driver_unregister(&drv->driver);
+ }
+-EXPORT_SYMBOL(memstick_unregister_driver);
++EXPORT_SYMBOL(memstick_unregister_driver_dup);
+ 
+ 
+ static int __init memstick_init(void)
+ {
+ 	int rc;
+ 
++	struct module *mod;
++	mod = find_module("memstick");
++	if (mod) {
++		printk(KERN_ALERT 
++		"memstick_dup can not be insmoded if memstick module is already insmoded !\n");
++		return -EINVAL;
++	}
++
+ 	workqueue = create_freezeable_workqueue("kmemstick");
+ 	if (!workqueue)
+ 		return -ENOMEM;
+diff --git a/include/linux/memstick.h b/include/linux/memstick.h
+index 690c35a..834db25 100644
+--- a/include/linux/memstick.h
++++ b/include/linux/memstick.h
+@@ -306,28 +306,28 @@ struct memstick_driver {
+ 	struct device_driver      driver;
+ };
+ 
+-int memstick_register_driver(struct memstick_driver *drv);
+-void memstick_unregister_driver(struct memstick_driver *drv);
++int memstick_register_driver_dup(struct memstick_driver *drv);
++void memstick_unregister_driver_dup(struct memstick_driver *drv);
+ 
+-struct memstick_host *memstick_alloc_host(unsigned int extra,
++struct memstick_host *memstick_alloc_host_dup(unsigned int extra,
+ 					  struct device *dev);
+ 
+-int memstick_add_host(struct memstick_host *host);
+-void memstick_remove_host(struct memstick_host *host);
+-void memstick_free_host(struct memstick_host *host);
+-void memstick_detect_change(struct memstick_host *host);
+-void memstick_suspend_host(struct memstick_host *host);
+-void memstick_resume_host(struct memstick_host *host);
++int memstick_add_host_dup(struct memstick_host *host);
++void memstick_remove_host_dup(struct memstick_host *host);
++void memstick_free_host_dup(struct memstick_host *host);
++void memstick_detect_change_dup(struct memstick_host *host);
++void memstick_suspend_host_dup(struct memstick_host *host);
++void memstick_resume_host_dup(struct memstick_host *host);
+ 
+-void memstick_init_req_sg(struct memstick_request *mrq, unsigned char tpc,
++void memstick_init_req_dup_sg(struct memstick_request *mrq, unsigned char tpc,
+ 			  const struct scatterlist *sg);
+-void memstick_init_req(struct memstick_request *mrq, unsigned char tpc,
++void memstick_init_req_dup(struct memstick_request *mrq, unsigned char tpc,
+ 		       const void *buf, size_t length);
+-int memstick_next_req(struct memstick_host *host,
++int memstick_next_req_dup(struct memstick_host *host,
+ 		      struct memstick_request **mrq);
+-void memstick_new_req(struct memstick_host *host);
++void memstick_new_req_dup(struct memstick_host *host);
+ 
+-int memstick_set_rw_addr(struct memstick_dev *card);
++int memstick_set_rw_addr_dup(struct memstick_dev *card);
+ 
+ static inline void *memstick_priv(struct memstick_host *host)
+ {
